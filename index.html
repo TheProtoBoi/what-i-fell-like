@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>GD Clone Level Select</title>
+<title>GD Clone Level Select + ESC</title>
 <style>
 body{margin:0;overflow:hidden;background:black;font-family:Arial;color:white;}
 canvas{display:block;margin:0 auto;}
@@ -31,23 +31,23 @@ let levels = [
   {
     name:"Demo Level",
     objects:[
-      {type:"block",x:400,y:420},
-      {type:"spike",x:480,y:420},
-      {type:"pad",x:640,y:420,used:false},
-      {type:"orb",x:820,y:300,color:"yellow",used:false},
-      {type:"orb",x:960,y:420,color:"blue",used:false},
-      {type:"block",x:1100,y:420},
-      {type:"end",x:1200,y:380}
+      {type:"block",x:200,y:420},
+      {type:"pad",x:300,y:420,used:false},
+      {type:"spike",x:400,y:420},
+      {type:"orb",x:500,y:300,color:"yellow",used:false},
+      {type:"orb",x:600,y:420,color:"blue",used:false},
+      {type:"block",x:700,y:420},
+      {type:"end",x:800,y:380}
     ]
   },
   {
     name:"Second Level",
     objects:[
-      {type:"block",x:300,y:420},
-      {type:"pad",x:400,y:420,used:false},
-      {type:"spike",x:500,y:420},
-      {type:"orb",x:600,y:300,color:"yellow",used:false},
-      {type:"end",x:800,y:380}
+      {type:"block",x:150,y:420},
+      {type:"pad",x:250,y:420,used:false},
+      {type:"spike",x:350,y:420},
+      {type:"orb",x:450,y:300,color:"yellow",used:false},
+      {type:"end",x:550,y:380}
     ]
   }
 ];
@@ -95,6 +95,7 @@ function startLevel(i){
 let inputJump = false;
 document.addEventListener("keydown", e=>{
   if(e.code==="Space" || e.code==="ArrowUp") inputJump=true;
+  if(e.code==="Escape") showMenu(); // ESC returns to menu
 });
 document.addEventListener("keyup", e=>{
   if(e.code==="Space" || e.code==="ArrowUp") inputJump=false;
