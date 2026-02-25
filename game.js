@@ -2,35 +2,35 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
 let player = { x: 50, y: 300, width: 40, height: 40, dy: 0, gravity: 0.8, jump: -15, flipped: false };
-let obstacles = [];
-let orbs = [];
-let portals = [];
-let finishLine = null;
-let frame = 0;
-let score = 0;
-let gameOver = false;
-let currentLevel = 0;
+let obstacles = [], orbs = [], portals = [], finishLine = null;
+let frame = 0, score = 0, gameOver = false, currentLevel = 0;
 
 const levels = [
-  { 
+  { // Level 1
     obstacles: [{ x: 400, y: 300, width: 40, height: 40 }, { x: 700, y: 300, width: 40, height: 40 }],
     orbs: [{ x: 500, y: 300 }],
     portals: [{ x: 600, y: 300 }],
-    finish: { x: 800, y: 300, width: 40, height: 40 }
+    finish: { x: 900, y: 300, width: 40, height: 40 }
   },
-  { 
-    obstacles: [{ x: 300, y: 300, width: 40, height: 40 }, { x: 600, y: 300, width: 40, height: 40 }],
+  { // Level 2
+    obstacles: [{ x: 300, y: 300, width: 40, height: 40 }, { x: 600, y: 300, width: 40, height: 40 }, { x: 800, y: 300, width: 40, height: 40 }],
     orbs: [{ x: 400, y: 300 }, { x: 500, y: 300 }],
     portals: [{ x: 450, y: 300 }, { x: 700, y: 300 }],
-    finish: { x: 900, y: 300, width: 40, height: 40 }
+    finish: { x: 1000, y: 300, width: 40, height: 40 }
+  },
+  { // Level 3
+    obstacles: [{ x: 350, y: 300, width: 40, height: 40 }, { x: 500, y: 300, width: 40, height: 40 }, { x: 750, y: 300, width: 40, height: 40 }],
+    orbs: [{ x: 450, y: 300 }, { x: 650, y: 300 }],
+    portals: [{ x: 550, y: 300 }],
+    finish: { x: 1100, y: 300, width: 40, height: 40 }
   }
 ];
 
-// Jump
+// Keyboard jump
 document.addEventListener('keydown', e => {
   if (e.code === 'Space') {
-    if (!player.flipped && player.y === 300) player.dy = player.jump;
-    if (player.flipped && player.y === 100) player.dy = -player.jump;
+    if (!player.flipped && player.y >= 300) player.dy = player.jump;
+    if (player.flipped && player.y <= 100) player.dy = -player.jump;
   }
 });
 
@@ -42,18 +42,33 @@ function startLevel(index) {
   player.y = 300;
   player.dy = 0;
   player.flipped = false;
+
   obstacles = JSON.parse(JSON.stringify(levels[index].obstacles));
   orbs = JSON.parse(JSON.stringify(levels[index].orbs));
   portals = JSON.parse(JSON.stringify(levels[index].portals));
   finishLine = JSON.parse(JSON.stringify(levels[index].finish));
 }
 
-// Collision helper
+// Collision detection
 function collides(a, b) {
   return a.x < b.x + b.width &&
          a.x + a.width > b.x &&
          a.y < b.y + b.height &&
          a.y + a.height > b.y;
+}
+
+// Smooth scrolling background
+let bgOffset = 0;
+function drawBackground() {
+  ctx.fillStyle = '#222';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  bgOffset -= 2;
+  if(bgOffset <= -canvas.width) bgOffset = 0;
+
+  ctx.fillStyle = '#333';
+  for(let i=0;i<canvas.width;i+=50){
+    ctx.fillRect((i+bgOffset)%canvas.width, 350, 40, 10);
+  }
 }
 
 function update() {
@@ -71,7 +86,7 @@ function update() {
   const items = [...obstacles, ...orbs, ...portals, finishLine];
   items.forEach(item => { if(item) item.x -= 6; });
 
-  // Check collisions
+  // Collisions
   obstacles.forEach(obs => { if (collides(player, obs)) { gameOver = true; alert(`Game Over! Score: ${score}`); startLevel(currentLevel); } });
   orbs.forEach((orb, i) => { 
     if (collides(player, orb)) { player.dy = player.jump * 1.5; orbs.splice(i,1); }
@@ -86,8 +101,8 @@ function update() {
 }
 
 function draw() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  
+  drawBackground();
+
   // Player
   ctx.fillStyle = 'lime';
   ctx.fillRect(player.x, player.y, player.width, player.height);
@@ -105,10 +120,7 @@ function draw() {
   portals.forEach(portal => ctx.fillRect(portal.x, portal.y, 30, 30));
 
   // Finish
-  if(finishLine) {
-    ctx.fillStyle = 'magenta';
-    ctx.fillRect(finishLine.x, finishLine.y, finishLine.width, finishLine.height);
-  }
+  if(finishLine) { ctx.fillStyle = 'magenta'; ctx.fillRect(finishLine.x, finishLine.y, finishLine.width, finishLine.height); }
 }
 
 function loop() { update(); draw(); requestAnimationFrame(loop); }
