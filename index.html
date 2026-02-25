@@ -2,158 +2,271 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Geometry Dash Clone</title>
+<title>GD Browser Clone+</title>
 <style>
-    body {
-        margin: 0;
-        overflow: hidden;
-        background: #111;
-        font-family: Arial, sans-serif;
-        color: white;
-        text-align: center;
-    }
-    canvas {
-        background: linear-gradient(#1e1e1e, #111);
-        display: block;
-        margin: 0 auto;
-    }
-    #ui {
-        position: absolute;
-        top: 20px;
-        width: 100%;
-        font-size: 24px;
-    }
+body{
+    margin:0;
+    overflow:hidden;
+    background:black;
+    font-family:Arial;
+    color:white;
+}
+canvas{
+    display:block;
+    margin:0 auto;
+}
+#menu{
+    position:absolute;
+    top:20px;
+    width:100%;
+    text-align:center;
+    z-index:10;
+}
+button{
+    padding:10px 20px;
+    margin:5px;
+    font-size:18px;
+    background:#00ffff;
+    border:none;
+    cursor:pointer;
+}
 </style>
 </head>
 <body>
 
-<div id="ui">Score: <span id="score">0</span></div>
+<div id="menu"></div>
 <canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
-canvas.height = 400;
+canvas.height = 500;
 
-let gravity = 0.6;
-let speed = 6;
-let gameOver = false;
-let score = 0;
+const grid = 40;
+const speed = 6;
 
-const player = {
-    x: 100,
-    y: 300,
-    size: 40,
-    dy: 0,
-    grounded: true,
-    jumpForce: -12
+let mode = "menu";
+let cameraX = 0;
+let currentLevel = null;
+
+let levels = JSON.parse(localStorage.getItem("gd_levels")) || [
+{
+name:"Demo",
+objects:[
+{type:"block",x:400,y:420},
+{type:"spike",x:480,y:460},
+{type:"pad",x:640,y:460},
+{type:"orb",x:800,y:360}
+]
+}
+];
+
+function saveLevels(){
+localStorage.setItem("gd_levels",JSON.stringify(levels));
+}
+
+const player={
+x:100,
+y:300,
+size:40,
+dy:0,
+gravity:0.8,
+jump:15,
+grounded:false,
+rotation:0
 };
 
-let obstacles = [];
-
-function spawnObstacle() {
-    const height = 40;
-    obstacles.push({
-        x: canvas.width,
-        y: canvas.height - height,
-        width: 40,
-        height: height
-    });
+function reset(){
+player.x=100;
+player.y=300;
+player.dy=0;
+cameraX=0;
 }
 
-setInterval(spawnObstacle, 1500);
-
-function jump() {
-    if (player.grounded && !gameOver) {
-        player.dy = player.jumpForce;
-        player.grounded = false;
-    }
+function showMenu(){
+mode="menu";
+menu.innerHTML=
+`<h1>GD Clone+</h1>
+<button onclick="playSelect()">Play</button>
+<button onclick="openEditor()">Editor</button>`;
 }
 
-document.addEventListener("keydown", e => {
-    if (e.code === "Space") jump();
-    if (e.code === "KeyR") location.reload();
+function playSelect(){
+mode="select";
+let html="<h2>Select Level</h2>";
+levels.forEach((l,i)=>{
+html+=`<button onclick="startLevel(${i})">${l.name}</button>`;
 });
-document.addEventListener("click", jump);
-
-function update() {
-    if (gameOver) return;
-
-    player.dy += gravity;
-    player.y += player.dy;
-
-    if (player.y + player.size >= canvas.height) {
-        player.y = canvas.height - player.size;
-        player.dy = 0;
-        player.grounded = true;
-    }
-
-    obstacles.forEach((obs, index) => {
-        obs.x -= speed;
-
-        if (
-            player.x < obs.x + obs.width &&
-            player.x + player.size > obs.x &&
-            player.y < obs.y + obs.height &&
-            player.y + player.size > obs.y
-        ) {
-            gameOver = true;
-        }
-
-        if (obs.x + obs.width < 0) {
-            obstacles.splice(index, 1);
-            score++;
-            document.getElementById("score").textContent = score;
-            speed += 0.2;
-        }
-    });
+html+=`<br><button onclick="showMenu()">Back</button>`;
+menu.innerHTML=html;
 }
 
-function drawPlayer() {
-    ctx.fillStyle = "#00f0ff";
-    ctx.fillRect(player.x, player.y, player.size, player.size);
+function startLevel(i){
+currentLevel=levels[i];
+mode="play";
+reset();
+menu.innerHTML=`<button onclick="showMenu()">Exit</button>`;
 }
 
-function drawObstacles() {
-    ctx.fillStyle = "#ff0040";
-    obstacles.forEach(obs => {
-        ctx.beginPath();
-        ctx.moveTo(obs.x, obs.y + obs.height);
-        ctx.lineTo(obs.x + obs.width / 2, obs.y);
-        ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
-        ctx.closePath();
-        ctx.fill();
-    });
+function openEditor(){
+mode="editor";
+currentLevel={name:"New Level",objects:[]};
+menu.innerHTML=
+`<h2>Editor</h2>
+<p>Click=Block | Shift=Spike | 1=Pad | 2=Orb</p>
+<button onclick="saveLevel()">Save</button>
+<button onclick="showMenu()">Back</button>`;
 }
 
-function drawGround() {
-    ctx.fillStyle = "#333";
-    ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
+function saveLevel(){
+let name=prompt("Level name?");
+if(name){
+currentLevel.name=name;
+levels.push(currentLevel);
+saveLevels();
+showMenu();
+}
 }
 
-function drawGameOver() {
-    if (gameOver) {
-        ctx.fillStyle = "white";
-        ctx.font = "40px Arial";
-        ctx.fillText("GAME OVER", canvas.width/2 - 130, 150);
-        ctx.font = "20px Arial";
-        ctx.fillText("Press R to Restart", canvas.width/2 - 90, 200);
-    }
+let placeType="block";
+
+document.addEventListener("keydown",e=>{
+if(mode==="editor"){
+if(e.key==="1") placeType="pad";
+if(e.key==="2") placeType="orb";
+}
+if(mode==="play" && (e.code==="Space"||e.code==="ArrowUp")){
+jump();
+}
+});
+
+canvas.addEventListener("click",e=>{
+if(mode==="editor"){
+const rect=canvas.getBoundingClientRect();
+const x=Math.floor((e.clientX-rect.left+cameraX)/grid)*grid;
+const y=Math.floor((e.clientY-rect.top)/grid)*grid;
+let type=e.shiftKey?"spike":placeType;
+currentLevel.objects.push({type,x,y});
+}
+if(mode==="play") jump();
+});
+
+function jump(){
+if(player.grounded){
+player.dy=-player.jump;
+player.grounded=false;
+}
+else{
+currentLevel.objects.forEach(o=>{
+if(o.type==="orb"){
+if(Math.abs(player.x-o.x)<40 && Math.abs(player.y-o.y)<40){
+player.dy=-player.jump*1.2;
+}
+}
+});
+}
 }
 
-function loop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    update();
-    drawGround();
-    drawPlayer();
-    drawObstacles();
-    drawGameOver();
-    requestAnimationFrame(loop);
+function collide(a){
+return player.x<a.x+grid &&
+player.x+player.size>a.x &&
+player.y<a.y+grid &&
+player.y+player.size>a.y;
 }
 
-loop();
+function drawObject(o){
+let x=o.x-cameraX;
+if(o.type==="block"){
+ctx.fillStyle="#00ffff";
+ctx.fillRect(x,o.y,grid,grid);
+}
+if(o.type==="spike"){
+ctx.fillStyle="red";
+ctx.beginPath();
+ctx.moveTo(x,o.y+grid);
+ctx.lineTo(x+grid/2,o.y);
+ctx.lineTo(x+grid,o.y+grid);
+ctx.fill();
+}
+if(o.type==="pad"){
+ctx.fillStyle="lime";
+ctx.fillRect(x,o.y+20,grid,20);
+}
+if(o.type==="orb"){
+ctx.fillStyle="yellow";
+ctx.beginPath();
+ctx.arc(x+20,o.y+20,15,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+let bgHue=0;
+
+function drawBackground(){
+bgHue+=0.5;
+let grad=ctx.createLinearGradient(0,0,0,canvas.height);
+grad.addColorStop(0,`hsl(${bgHue},70%,20%)`);
+grad.addColorStop(1,"black");
+ctx.fillStyle=grad;
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+// parallax grid
+ctx.strokeStyle="rgba(255,255,255,0.05)";
+for(let i=0;i<canvas.width;i+=80){
+ctx.beginPath();
+ctx.moveTo(i-(cameraX*0.2)%80,0);
+ctx.lineTo(i-(cameraX*0.2)%80,canvas.height);
+ctx.stroke();
+}
+}
+
+function update(){
+drawBackground();
+
+if(mode==="play"){
+player.x+=speed;
+cameraX+=speed;
+
+player.dy+=player.gravity;
+player.y+=player.dy;
+player.grounded=false;
+
+currentLevel.objects.forEach(o=>{
+drawObject(o);
+
+if(collide(o)){
+if(o.type==="block"){
+player.y=o.y-player.size;
+player.dy=0;
+player.grounded=true;
+}
+if(o.type==="spike"){
+reset();
+}
+if(o.type==="pad"){
+player.dy=-player.jump*1.5;
+}
+}
+});
+
+if(player.y>canvas.height) reset();
+
+player.rotation+=0.08;
+
+ctx.save();
+ctx.translate(player.x-cameraX+20,player.y+20);
+ctx.rotate(player.rotation);
+ctx.fillStyle="white";
+ctx.fillRect(-20,-20,40,40);
+ctx.restore();
+}
+
+requestAnimationFrame(update);
+}
+
+update();
+showMenu();
 </script>
-
 </body>
 </html>
