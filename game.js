@@ -1,129 +1,177 @@
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-let player = { x: 50, y: 300, width: 40, height: 40, dy: 0, gravity: 0.8, jump: -15, flipped: false };
-let obstacles = [], orbs = [], portals = [], finishLine = null;
-let frame = 0, score = 0, gameOver = false, currentLevel = 0;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-const levels = [
-  { // Level 1
-    obstacles: [{ x: 400, y: 300, width: 40, height: 40 }, { x: 700, y: 300, width: 40, height: 40 }],
-    orbs: [{ x: 500, y: 300 }],
-    portals: [{ x: 600, y: 300 }],
-    finish: { x: 900, y: 300, width: 40, height: 40 }
-  },
-  { // Level 2
-    obstacles: [{ x: 300, y: 300, width: 40, height: 40 }, { x: 600, y: 300, width: 40, height: 40 }, { x: 800, y: 300, width: 40, height: 40 }],
-    orbs: [{ x: 400, y: 300 }, { x: 500, y: 300 }],
-    portals: [{ x: 450, y: 300 }, { x: 700, y: 300 }],
-    finish: { x: 1000, y: 300, width: 40, height: 40 }
-  },
-  { // Level 3
-    obstacles: [{ x: 350, y: 300, width: 40, height: 40 }, { x: 500, y: 300, width: 40, height: 40 }, { x: 750, y: 300, width: 40, height: 40 }],
-    orbs: [{ x: 450, y: 300 }, { x: 650, y: 300 }],
-    portals: [{ x: 550, y: 300 }],
-    finish: { x: 1100, y: 300, width: 40, height: 40 }
+class Game {
+  constructor() {
+    this.gravity = 0.8;
+    this.gameSpeed = 6;
+    this.groundHeight = 100;
+    this.isRunning = true;
+
+    this.player = new Player(150, canvas.height - this.groundHeight - 40);
+    this.obstacles = [];
+
+    this.spawnTimer = 0;
+    this.spawnInterval = 90;
+
+    this.lastTime = 0;
+
+    this.initControls();
+    requestAnimationFrame(this.loop.bind(this));
   }
-];
 
-// Keyboard jump
-document.addEventListener('keydown', e => {
-  if (e.code === 'Space') {
-    if (!player.flipped && player.y >= 300) player.dy = player.jump;
-    if (player.flipped && player.y <= 100) player.dy = -player.jump;
+  initControls() {
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") this.player.jump();
+    });
+
+    window.addEventListener("mousedown", () => {
+      this.player.jump();
+    });
   }
-});
 
-function startLevel(index) {
-  currentLevel = index;
-  frame = 0;
-  score = 0;
-  gameOver = false;
-  player.y = 300;
-  player.dy = 0;
-  player.flipped = false;
+  spawnObstacle() {
+    const size = 40;
+    const y = canvas.height - this.groundHeight - size;
+    this.obstacles.push(new Obstacle(canvas.width, y, size));
+  }
 
-  obstacles = JSON.parse(JSON.stringify(levels[index].obstacles));
-  orbs = JSON.parse(JSON.stringify(levels[index].orbs));
-  portals = JSON.parse(JSON.stringify(levels[index].portals));
-  finishLine = JSON.parse(JSON.stringify(levels[index].finish));
-}
+  update(deltaTime) {
+    if (!this.isRunning) return;
 
-// Collision detection
-function collides(a, b) {
-  return a.x < b.x + b.width &&
-         a.x + a.width > b.x &&
-         a.y < b.y + b.height &&
-         a.y + a.height > b.y;
-}
+    this.player.update(this.gravity);
 
-// Smooth scrolling background
-let bgOffset = 0;
-function drawBackground() {
-  ctx.fillStyle = '#222';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  bgOffset -= 2;
-  if(bgOffset <= -canvas.width) bgOffset = 0;
+    this.spawnTimer++;
+    if (this.spawnTimer > this.spawnInterval) {
+      this.spawnObstacle();
+      this.spawnTimer = 0;
+    }
 
-  ctx.fillStyle = '#333';
-  for(let i=0;i<canvas.width;i+=50){
-    ctx.fillRect((i+bgOffset)%canvas.width, 350, 40, 10);
+    this.obstacles.forEach((obs, index) => {
+      obs.update(this.gameSpeed);
+
+      if (obs.x + obs.size < 0) {
+        this.obstacles.splice(index, 1);
+      }
+
+      if (this.player.collidesWith(obs)) {
+        this.reset();
+      }
+    });
+  }
+
+  reset() {
+    this.player.reset();
+    this.obstacles = [];
+    this.spawnTimer = 0;
+  }
+
+  draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Background glow
+    ctx.fillStyle = "#12122a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Ground
+    ctx.fillStyle = "#1f1f3d";
+    ctx.fillRect(0, canvas.height - this.groundHeight, canvas.width, this.groundHeight);
+
+    this.player.draw();
+    this.obstacles.forEach(obs => obs.draw());
+  }
+
+  loop(timestamp) {
+    const deltaTime = timestamp - this.lastTime;
+    this.lastTime = timestamp;
+
+    this.update(deltaTime);
+    this.draw();
+
+    requestAnimationFrame(this.loop.bind(this));
   }
 }
 
-function update() {
-  if (gameOver) return;
+class Player {
+  constructor(x, y) {
+    this.startX = x;
+    this.startY = y;
 
-  frame++;
-  player.dy += player.flipped ? -player.gravity : player.gravity;
-  player.y += player.dy;
+    this.x = x;
+    this.y = y;
+    this.size = 40;
 
-  // Boundaries
-  if (!player.flipped && player.y > 300) { player.y = 300; player.dy = 0; }
-  if (player.flipped && player.y < 100) { player.y = 100; player.dy = 0; }
+    this.velocityY = 0;
+    this.jumpForce = -15;
+    this.isOnGround = true;
+  }
 
-  // Move obstacles, orbs, portals, finish line
-  const items = [...obstacles, ...orbs, ...portals, finishLine];
-  items.forEach(item => { if(item) item.x -= 6; });
+  jump() {
+    if (this.isOnGround) {
+      this.velocityY = this.jumpForce;
+      this.isOnGround = false;
+    }
+  }
 
-  // Collisions
-  obstacles.forEach(obs => { if (collides(player, obs)) { gameOver = true; alert(`Game Over! Score: ${score}`); startLevel(currentLevel); } });
-  orbs.forEach((orb, i) => { 
-    if (collides(player, orb)) { player.dy = player.jump * 1.5; orbs.splice(i,1); }
-  });
-  portals.forEach((portal, i) => { 
-    if (collides(player, portal)) { player.flipped = !player.flipped; portals.splice(i,1); }
-  });
-  if (finishLine && collides(player, finishLine)) { alert(`Level Complete! Score: ${score}`); startLevel(currentLevel); }
+  update(gravity) {
+    this.velocityY += gravity;
+    this.y += this.velocityY;
 
-  score = Math.floor(frame / 10);
-  document.getElementById('score').textContent = `Score: ${score}`;
+    const groundY = canvas.height - 100 - this.size;
+    if (this.y >= groundY) {
+      this.y = groundY;
+      this.velocityY = 0;
+      this.isOnGround = true;
+    }
+  }
+
+  collidesWith(obstacle) {
+    return (
+      this.x < obstacle.x + obstacle.size &&
+      this.x + this.size > obstacle.x &&
+      this.y < obstacle.y + obstacle.size &&
+      this.y + this.size > obstacle.y
+    );
+  }
+
+  reset() {
+    this.x = this.startX;
+    this.y = this.startY;
+    this.velocityY = 0;
+  }
+
+  draw() {
+    ctx.fillStyle = "#00f0ff";
+    ctx.shadowColor = "#00f0ff";
+    ctx.shadowBlur = 20;
+    ctx.fillRect(this.x, this.y, this.size, this.size);
+    ctx.shadowBlur = 0;
+  }
 }
 
-function draw() {
-  drawBackground();
+class Obstacle {
+  constructor(x, y, size) {
+    this.x = x;
+    this.y = y;
+    this.size = size;
+  }
 
-  // Player
-  ctx.fillStyle = 'lime';
-  ctx.fillRect(player.x, player.y, player.width, player.height);
+  update(speed) {
+    this.x -= speed;
+  }
 
-  // Obstacles
-  ctx.fillStyle = 'red';
-  obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.width, obs.height));
-
-  // Orbs
-  ctx.fillStyle = 'yellow';
-  orbs.forEach(orb => ctx.fillRect(orb.x, orb.y, 20, 20));
-
-  // Portals
-  ctx.fillStyle = 'cyan';
-  portals.forEach(portal => ctx.fillRect(portal.x, portal.y, 30, 30));
-
-  // Finish
-  if(finishLine) { ctx.fillStyle = 'magenta'; ctx.fillRect(finishLine.x, finishLine.y, finishLine.width, finishLine.height); }
+  draw() {
+    ctx.fillStyle = "#ff0055";
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y + this.size);
+    ctx.lineTo(this.x + this.size / 2, this.y);
+    ctx.lineTo(this.x + this.size, this.y + this.size);
+    ctx.closePath();
+    ctx.fill();
+  }
 }
 
-function loop() { update(); draw(); requestAnimationFrame(loop); }
-
-startLevel(0);
-loop();
+new Game();
