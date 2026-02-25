@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>GD Clone Endable Level</title>
+<title>GD Clone Level Select</title>
 <style>
 body{margin:0;overflow:hidden;background:black;font-family:Arial;color:white;}
 canvas{display:block;margin:0 auto;}
@@ -28,18 +28,28 @@ let cameraX = 0;
 let currentLevel = null;
 
 let levels = [
-{
-  name:"Demo Level",
-  objects:[
-    {type:"block",x:400,y:420},
-    {type:"spike",x:480,y:420},
-    {type:"pad",x:640,y:420, used:false},
-    {type:"orb",x:820,y:300,color:"yellow",used:false},
-    {type:"orb",x:960,y:420,color:"blue",used:false},
-    {type:"block",x:1100,y:420},
-    {type:"end",x:1200,y:380}
-  ]
-}
+  {
+    name:"Demo Level",
+    objects:[
+      {type:"block",x:400,y:420},
+      {type:"spike",x:480,y:420},
+      {type:"pad",x:640,y:420,used:false},
+      {type:"orb",x:820,y:300,color:"yellow",used:false},
+      {type:"orb",x:960,y:420,color:"blue",used:false},
+      {type:"block",x:1100,y:420},
+      {type:"end",x:1200,y:380}
+    ]
+  },
+  {
+    name:"Second Level",
+    objects:[
+      {type:"block",x:300,y:420},
+      {type:"pad",x:400,y:420,used:false},
+      {type:"spike",x:500,y:420},
+      {type:"orb",x:600,y:300,color:"yellow",used:false},
+      {type:"end",x:800,y:380}
+    ]
+  }
 ];
 
 const player={
@@ -51,7 +61,7 @@ const player={
   jump:16,
   grounded:false,
   rotation:0,
-  gravityDir:1 // 1=normal, -1=upside down
+  gravityDir:1
 };
 
 function reset(){
@@ -63,13 +73,25 @@ function reset(){
   cameraX=0;
 }
 
+// MENU
 function showMenu(){
   mode="menu";
-  menu.innerHTML=`<h1>GD Clone</h1>
-  <button onclick="startLevel(0)">Play Level</button>`;
+  let html="<h1>GD Clone</h1><h2>Select Level</h2>";
+  levels.forEach((lvl,i)=>{
+    html+=`<button onclick="startLevel(${i})">${lvl.name}</button>`;
+  });
+  menu.innerHTML = html;
 }
 
-// Input
+// START LEVEL
+function startLevel(i){
+  currentLevel = levels[i];
+  mode = "play";
+  reset();
+  menu.innerHTML=`<button onclick="showMenu()">Back to Menu</button>`;
+}
+
+// INPUT
 let inputJump = false;
 document.addEventListener("keydown", e=>{
   if(e.code==="Space" || e.code==="ArrowUp") inputJump=true;
@@ -80,7 +102,7 @@ document.addEventListener("keyup", e=>{
 canvas.addEventListener("mousedown", ()=> inputJump=true);
 canvas.addEventListener("mouseup", ()=> inputJump=false);
 
-// Collision helpers
+// COLLISION
 function rectCollide(a){
   return player.x < a.x+grid &&
          player.x+player.size > a.x &&
@@ -92,49 +114,44 @@ function circleCollide(o){
   let py = player.y+20;
   let ox = o.x+20;
   let oy = o.y+20;
-  let dist = Math.hypot(px-ox, py-oy);
-  return dist < 30;
+  return Math.hypot(px-ox, py-oy) < 30;
 }
 
-// Draw objects
+// DRAW OBJECTS
 function drawObject(o){
   let x=o.x-cameraX;
   if(o.type==="block"){ctx.fillStyle="#00ffff";ctx.fillRect(x,o.y,grid,grid);}
   if(o.type==="spike"){ctx.fillStyle="red";ctx.beginPath();ctx.moveTo(x,o.y+grid);ctx.lineTo(x+grid/2,o.y);ctx.lineTo(x+grid,o.y+grid);ctx.fill();}
   if(o.type==="pad"){ctx.fillStyle="lime";ctx.fillRect(x+5,o.y+25,grid-10,10);}
-  if(o.type==="orb"){
-    ctx.beginPath();
-    ctx.arc(x+20,o.y+20,18,0,Math.PI*2);
-    ctx.fillStyle=o.color==="blue"?"#00f":"#ff0";
-    ctx.fill();
-  }
+  if(o.type==="orb"){ctx.beginPath();ctx.arc(x+20,o.y+20,18,0,Math.PI*2); ctx.fillStyle=o.color==="blue"?"#00f":"#ff0"; ctx.fill();}
   if(o.type==="end"){ctx.fillStyle="magenta";ctx.fillRect(x,o.y,grid,grid);}
 }
 
+// BACKGROUND
 let bgHue=0;
 function drawBackground(){
   bgHue+=0.5;
   let grad=ctx.createLinearGradient(0,0,0,canvas.height);
   grad.addColorStop(0,`hsl(${bgHue},70%,25%)`);
   grad.addColorStop(1,"black");
-  ctx.fillStyle=grad;ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle=grad; ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  ctx.fillStyle="#111";
-  ctx.fillRect(0,floorY,canvas.width,canvas.height-floorY);
-  ctx.strokeStyle="#00ffff";ctx.lineWidth=4;
-  ctx.beginPath();ctx.moveTo(0,floorY);ctx.lineTo(canvas.width,floorY);ctx.stroke();
+  ctx.fillStyle="#111"; ctx.fillRect(0,floorY,canvas.width,canvas.height-floorY);
+  ctx.strokeStyle="#00ffff"; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(0,floorY); ctx.lineTo(canvas.width,floorY); ctx.stroke();
 }
 
+// UPDATE LOOP
 function update(){
   drawBackground();
   if(mode!=="play") return;
 
-  player.x+=speed;
-  cameraX+=speed*1;
+  player.x += speed;
+  cameraX += speed;
 
-  player.dy+=player.gravity*player.gravityDir;
-  player.y+=player.dy;
-  player.grounded=false;
+  player.dy += player.gravity*player.gravityDir;
+  player.y += player.dy;
+  player.grounded = false;
 
   currentLevel.objects.forEach(o=>{
     drawObject(o);
@@ -151,21 +168,23 @@ function update(){
     if(o.type==="pad" && rectCollide(o) && !o.used){
       player.dy=-player.jump*1.6*player.gravityDir;
       o.used=true;
-    } else if(o.type==="pad" && !rectCollide(o)){o.used=false;}
+    } else if(o.type==="pad" && !rectCollide(o)) o.used=false;
 
     if(o.type==="orb" && circleCollide(o) && !o.used){
-      if(o.color==="yellow"){player.dy=-player.jump*player.gravityDir;}
-      else if(o.color==="blue"){player.gravityDir*=-1; player.dy=-player.jump*player.gravityDir;}
+      if(o.color==="yellow") player.dy=-player.jump*player.gravityDir;
+      if(o.color==="blue") {player.gravityDir*=-1; player.dy=-player.jump*player.gravityDir;}
       o.used=true;
-    } else if(o.type==="orb" && !circleCollide(o)){o.used=false;}
+    } else if(o.type==="orb" && !circleCollide(o)) o.used=false;
 
-    if(o.type==="end" && rectCollide(o)){alert("Level Complete!");reset();}
+    if(o.type==="end" && rectCollide(o)){
+      alert("Level Complete!");
+      reset();
+    }
   });
 
-  if(player.y + player.size >= floorY && player.gravityDir===1){player.y=floorY-player.size;player.dy=0;player.grounded=true;}
-  if(player.y <= 0 && player.gravityDir===-1){player.y=0;player.dy=0;player.grounded=true;}
+  if(player.y+player.size>=floorY && player.gravityDir===1){player.y=floorY-player.size;player.dy=0;player.grounded=true;}
+  if(player.y<=0 && player.gravityDir===-1){player.y=0;player.dy=0;player.grounded=true;}
 
-  // Player cube
   ctx.save();
   ctx.translate(player.x-cameraX+20,player.y+20);
   ctx.rotate(player.rotation);
