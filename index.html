@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Geometry Dash Clone</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #111;
+        font-family: Arial, sans-serif;
+        color: white;
+        text-align: center;
+    }
+    canvas {
+        background: linear-gradient(#1e1e1e, #111);
+        display: block;
+        margin: 0 auto;
+    }
+    #ui {
+        position: absolute;
+        top: 20px;
+        width: 100%;
+        font-size: 24px;
+    }
+</style>
+</head>
+<body>
+
+<div id="ui">Score: <span id="score">0</span></div>
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = 400;
+
+let gravity = 0.6;
+let speed = 6;
+let gameOver = false;
+let score = 0;
+
+const player = {
+    x: 100,
+    y: 300,
+    size: 40,
+    dy: 0,
+    grounded: true,
+    jumpForce: -12
+};
+
+let obstacles = [];
+
+function spawnObstacle() {
+    const height = 40;
+    obstacles.push({
+        x: canvas.width,
+        y: canvas.height - height,
+        width: 40,
+        height: height
+    });
+}
+
+setInterval(spawnObstacle, 1500);
+
+function jump() {
+    if (player.grounded && !gameOver) {
+        player.dy = player.jumpForce;
+        player.grounded = false;
+    }
+}
+
+document.addEventListener("keydown", e => {
+    if (e.code === "Space") jump();
+    if (e.code === "KeyR") location.reload();
+});
+document.addEventListener("click", jump);
+
+function update() {
+    if (gameOver) return;
+
+    player.dy += gravity;
+    player.y += player.dy;
+
+    if (player.y + player.size >= canvas.height) {
+        player.y = canvas.height - player.size;
+        player.dy = 0;
+        player.grounded = true;
+    }
+
+    obstacles.forEach((obs, index) => {
+        obs.x -= speed;
+
+        if (
+            player.x < obs.x + obs.width &&
+            player.x + player.size > obs.x &&
+            player.y < obs.y + obs.height &&
+            player.y + player.size > obs.y
+        ) {
+            gameOver = true;
+        }
+
+        if (obs.x + obs.width < 0) {
+            obstacles.splice(index, 1);
+            score++;
+            document.getElementById("score").textContent = score;
+            speed += 0.2;
+        }
+    });
+}
+
+function drawPlayer() {
+    ctx.fillStyle = "#00f0ff";
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+}
+
+function drawObstacles() {
+    ctx.fillStyle = "#ff0040";
+    obstacles.forEach(obs => {
+        ctx.beginPath();
+        ctx.moveTo(obs.x, obs.y + obs.height);
+        ctx.lineTo(obs.x + obs.width / 2, obs.y);
+        ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+        ctx.closePath();
+        ctx.fill();
+    });
+}
+
+function drawGround() {
+    ctx.fillStyle = "#333";
+    ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
+}
+
+function drawGameOver() {
+    if (gameOver) {
+        ctx.fillStyle = "white";
+        ctx.font = "40px Arial";
+        ctx.fillText("GAME OVER", canvas.width/2 - 130, 150);
+        ctx.font = "20px Arial";
+        ctx.fillText("Press R to Restart", canvas.width/2 - 90, 200);
+    }
+}
+
+function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    update();
+    drawGround();
+    drawPlayer();
+    drawObstacles();
+    drawGameOver();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
