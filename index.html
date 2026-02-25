@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>GD Clone Level Select + ESC</title>
+<title>GD Clone Playable Level</title>
 <style>
 body{margin:0;overflow:hidden;background:black;font-family:Arial;color:white;}
 canvas{display:block;margin:0 auto;}
@@ -31,13 +31,16 @@ let levels = [
   {
     name:"Demo Level",
     objects:[
-      {type:"block",x:200,y:420},
-      {type:"pad",x:300,y:420,used:false},
-      {type:"spike",x:400,y:420},
-      {type:"orb",x:500,y:300,color:"yellow",used:false},
-      {type:"orb",x:600,y:420,color:"blue",used:false},
-      {type:"block",x:700,y:420},
-      {type:"end",x:800,y:380}
+      {type:"block",x:150,y:420},
+      {type:"pad",x:250,y:420,used:false},
+      {type:"spike",x:350,y:420},
+      {type:"orb",x:450,y:300,color:"yellow",used:false},
+      {type:"orb",x:550,y:420,color:"blue",used:false},
+      {type:"block",x:650,y:420},
+      {type:"pad",x:750,y:420,used:false},
+      {type:"spike",x:850,y:420},
+      {type:"orb",x:950,y:300,color:"yellow",used:false},
+      {type:"end",x:1050,y:380}
     ]
   },
   {
@@ -47,7 +50,9 @@ let levels = [
       {type:"pad",x:250,y:420,used:false},
       {type:"spike",x:350,y:420},
       {type:"orb",x:450,y:300,color:"yellow",used:false},
-      {type:"end",x:550,y:380}
+      {type:"block",x:550,y:420},
+      {type:"orb",x:650,y:420,color:"blue",used:false},
+      {type:"end",x:750,y:380}
     ]
   }
 ];
@@ -95,7 +100,7 @@ function startLevel(i){
 let inputJump = false;
 document.addEventListener("keydown", e=>{
   if(e.code==="Space" || e.code==="ArrowUp") inputJump=true;
-  if(e.code==="Escape") showMenu(); // ESC returns to menu
+  if(e.code==="Escape") showMenu();
 });
 document.addEventListener("keyup", e=>{
   if(e.code==="Space" || e.code==="ArrowUp") inputJump=false;
@@ -148,7 +153,7 @@ function update(){
   if(mode!=="play") return;
 
   player.x += speed;
-  cameraX += speed;
+  cameraX = player.x - 100; // camera follows player
 
   player.dy += player.gravity*player.gravityDir;
   player.y += player.dy;
