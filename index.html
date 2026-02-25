@@ -56,9 +56,9 @@ let levels = JSON.parse(localStorage.getItem("gd_levels")) || [
 name:"Demo",
 objects:[
 {type:"block",x:400,y:420},
-{type:"spike",x:480,y:460},
-{type:"pad",x:640,y:460},
-{type:"orb",x:800,y:360}
+{type:"spike",x:480,y:420},
+{type:"pad",x:640,y:420},
+{type:"orb",x:800,y:300}
 ]
 }
 ];
@@ -145,8 +145,11 @@ jump();
 canvas.addEventListener("click",e=>{
 if(mode==="editor"){
 const rect=canvas.getBoundingClientRect();
-const x=Math.floor((e.clientX-rect.left+cameraX)/grid)*grid;
-const y=Math.floor((e.clientY-rect.top)/grid)*grid;
+let x=Math.floor((e.clientX-rect.left+cameraX)/grid)*grid;
+let y=Math.floor((e.clientY-rect.top)/grid)*grid;
+
+if(y >= floorY-grid) y = floorY-grid; // prevent below floor
+
 let type=e.shiftKey?"spike":placeType;
 currentLevel.objects.push({type,x,y});
 }
@@ -157,23 +160,20 @@ function jump(){
 if(player.grounded){
 player.dy=-player.jump;
 player.grounded=false;
-}
-else{
+}else{
 currentLevel.objects.forEach(o=>{
-if(o.type==="orb"){
-if(Math.abs(player.x-o.x)<40 && Math.abs(player.y-o.y)<40){
+if(o.type==="orb" && collide(o)){
 player.dy=-player.jump*1.3;
-}
 }
 });
 }
 }
 
 function collide(a){
-return player.x<a.x+grid &&
-player.x+player.size>a.x &&
-player.y<a.y+grid &&
-player.y+player.size>a.y;
+return player.x < a.x+grid &&
+player.x+player.size > a.x &&
+player.y < a.y+grid &&
+player.y+player.size > a.y;
 }
 
 function drawObject(o){
@@ -195,7 +195,7 @@ ctx.fill();
 
 if(o.type==="pad"){
 ctx.fillStyle="lime";
-ctx.fillRect(x,o.y+20,grid,20);
+ctx.fillRect(x,o.y+25,grid,15);
 }
 
 if(o.type==="orb"){
@@ -218,7 +218,7 @@ grad.addColorStop(1,"black");
 ctx.fillStyle=grad;
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
-// Parallax vertical lines
+// parallax lines
 ctx.strokeStyle="rgba(255,255,255,0.05)";
 for(let i=0;i<canvas.width;i+=80){
 ctx.beginPath();
@@ -227,7 +227,7 @@ ctx.lineTo(i-(cameraX*0.2)%80,canvas.height);
 ctx.stroke();
 }
 
-// FLOOR
+// floor
 ctx.fillStyle="#111";
 ctx.fillRect(0,floorY,canvas.width,canvas.height-floorY);
 
@@ -251,13 +251,7 @@ player.dy+=player.gravity;
 player.y+=player.dy;
 player.grounded=false;
 
-// FLOOR COLLISION
-if(player.y+player.size>=floorY){
-player.y=floorY-player.size;
-player.dy=0;
-player.grounded=true;
-}
-
+// OBJECT COLLISIONS FIRST
 currentLevel.objects.forEach(o=>{
 drawObject(o);
 
@@ -278,6 +272,13 @@ player.dy=-player.jump*1.6;
 }
 }
 });
+
+// FLOOR AFTER OBJECTS
+if(player.y+player.size>=floorY){
+player.y=floorY-player.size;
+player.dy=0;
+player.grounded=true;
+}
 
 player.rotation+=0.08;
 
