@@ -45,6 +45,7 @@ canvas.height = 500;
 
 const grid = 40;
 const speed = 6;
+const floorY = 460;
 
 let mode = "menu";
 let cameraX = 0;
@@ -68,18 +69,18 @@ localStorage.setItem("gd_levels",JSON.stringify(levels));
 
 const player={
 x:100,
-y:300,
+y:floorY-40,
 size:40,
 dy:0,
-gravity:0.8,
-jump:15,
+gravity:0.9,
+jump:16,
 grounded:false,
 rotation:0
 };
 
 function reset(){
 player.x=100;
-player.y=300;
+player.y=floorY-player.size;
 player.dy=0;
 cameraX=0;
 }
@@ -161,7 +162,7 @@ else{
 currentLevel.objects.forEach(o=>{
 if(o.type==="orb"){
 if(Math.abs(player.x-o.x)<40 && Math.abs(player.y-o.y)<40){
-player.dy=-player.jump*1.2;
+player.dy=-player.jump*1.3;
 }
 }
 });
@@ -177,10 +178,12 @@ player.y+player.size>a.y;
 
 function drawObject(o){
 let x=o.x-cameraX;
+
 if(o.type==="block"){
 ctx.fillStyle="#00ffff";
 ctx.fillRect(x,o.y,grid,grid);
 }
+
 if(o.type==="spike"){
 ctx.fillStyle="red";
 ctx.beginPath();
@@ -189,10 +192,12 @@ ctx.lineTo(x+grid/2,o.y);
 ctx.lineTo(x+grid,o.y+grid);
 ctx.fill();
 }
+
 if(o.type==="pad"){
 ctx.fillStyle="lime";
 ctx.fillRect(x,o.y+20,grid,20);
 }
+
 if(o.type==="orb"){
 ctx.fillStyle="yellow";
 ctx.beginPath();
@@ -205,13 +210,15 @@ let bgHue=0;
 
 function drawBackground(){
 bgHue+=0.5;
+
 let grad=ctx.createLinearGradient(0,0,0,canvas.height);
-grad.addColorStop(0,`hsl(${bgHue},70%,20%)`);
+grad.addColorStop(0,`hsl(${bgHue},70%,25%)`);
 grad.addColorStop(1,"black");
+
 ctx.fillStyle=grad;
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
-// parallax grid
+// Parallax vertical lines
 ctx.strokeStyle="rgba(255,255,255,0.05)";
 for(let i=0;i<canvas.width;i+=80){
 ctx.beginPath();
@@ -219,12 +226,24 @@ ctx.moveTo(i-(cameraX*0.2)%80,0);
 ctx.lineTo(i-(cameraX*0.2)%80,canvas.height);
 ctx.stroke();
 }
+
+// FLOOR
+ctx.fillStyle="#111";
+ctx.fillRect(0,floorY,canvas.width,canvas.height-floorY);
+
+ctx.strokeStyle="#00ffff";
+ctx.lineWidth=4;
+ctx.beginPath();
+ctx.moveTo(0,floorY);
+ctx.lineTo(canvas.width,floorY);
+ctx.stroke();
 }
 
 function update(){
 drawBackground();
 
 if(mode==="play"){
+
 player.x+=speed;
 cameraX+=speed;
 
@@ -232,25 +251,33 @@ player.dy+=player.gravity;
 player.y+=player.dy;
 player.grounded=false;
 
+// FLOOR COLLISION
+if(player.y+player.size>=floorY){
+player.y=floorY-player.size;
+player.dy=0;
+player.grounded=true;
+}
+
 currentLevel.objects.forEach(o=>{
 drawObject(o);
 
 if(collide(o)){
-if(o.type==="block"){
+
+if(o.type==="block" && player.dy>=0){
 player.y=o.y-player.size;
 player.dy=0;
 player.grounded=true;
 }
+
 if(o.type==="spike"){
 reset();
 }
+
 if(o.type==="pad"){
-player.dy=-player.jump*1.5;
+player.dy=-player.jump*1.6;
 }
 }
 });
-
-if(player.y>canvas.height) reset();
 
 player.rotation+=0.08;
 
